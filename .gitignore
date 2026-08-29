@@ -1,0 +1,12 @@
+# very useless gitignore, i added bc i hate __pycache__ folder
+
+# pycache folder
+__pycache__/
+
+# bins
+*.exe
+*.obj
+*.o
+*.pyc
+*.lib
+*.dll
