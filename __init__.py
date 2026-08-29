@@ -1,5 +1,4 @@
 import os
-import subprocess
 
 CPP_SUFFIXES = (".cpp", ".cxx", ".cc", ".ipp", ".ixx")
 C_SUFFIXES = (".c",)
@@ -7,6 +6,7 @@ SOURCE_SUFFIXES = CPP_SUFFIXES + C_SUFFIXES
 
 
 def _try_run(args: list[str]):
+    import subprocess
     try:
         subprocess.run(args, check=True)
     except subprocess.CalledProcessError:
@@ -14,20 +14,16 @@ def _try_run(args: list[str]):
     except OSError:
         print("\033[31mCannot run the command...\033[m")
 
-
 def _search_dir(target: str, path="."):
     with os.scandir(path) as entries:
         return any(e.name == target and e.is_dir() for e in entries)
-
 
 def _search_file(target: str, path="."):
     with os.scandir(path) as entries:
         return any(e.name == target and e.is_file() for e in entries)
 
-
 def is_empty(string: str):
     return string == ""
-
 
 class Builder():
     def __init__(self, compiler=""):
@@ -85,7 +81,7 @@ class Builder():
             executablename = self.__executable_name
 
         if builddir != "." and not _search_dir(builddir):
-            os.makedirs(builddir)
+            os.makedirs(builddir, exist_ok=True)
 
         cmd = [self.__compiler, *self.__flags, *self.__source_files]
         if executablename:
