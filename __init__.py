@@ -1,41 +1,41 @@
 import os
 import subprocess
 
-CPP_SUFFIX = (".cpp", ".cxx", ".cc", ".ipp", ".ixx")
-C_SUFFIX = ".c"
+CPP_SUFFIXES = (".cpp", ".cxx", ".cc", ".ipp", ".ixx")
+C_SUFFIXES = (".c",)
+SOURCE_SUFFIXES = CPP_SUFFIXES + C_SUFFIXES
 
-def _try_run(args: str):
+
+def _try_run(args: list[str]):
     try:
-        subprocess.run(args)
+        subprocess.run(args, check=True)
     except subprocess.CalledProcessError:
         print("\033[31mCompilation error...\033[m")
     except OSError:
         print("\033[31mCannot run the command...\033[m")
 
+
 def _search_dir(target: str, path="."):
-    with os.scandir(path) as entry:
-        for item in entry:
-            if item.name == target and item.is_dir():
-                return True
-    return False
+    with os.scandir(path) as entries:
+        return any(e.name == target and e.is_dir() for e in entries)
+
 
 def _search_file(target: str, path="."):
-    with os.scandir(path) as entry:
-        for item in entry:
-            if item.name == target and item.is_file():
-                return True
-    return False
+    with os.scandir(path) as entries:
+        return any(e.name == target and e.is_file() for e in entries)
+
 
 def is_empty(string: str):
     return string == ""
 
+
 class Builder():
     def __init__(self, compiler=""):
         self.__compiler = compiler
-        self.__source_files = list()
-        self.__executable_name = str()
-        self.__flags = str()
-    
+        self.__source_files = []
+        self.__executable_name = ""
+        self.__flags = []
+
     def compiler(self):
         return self.__compiler
 
@@ -53,13 +53,12 @@ class Builder():
 
     def get_sources(self, path: str):
         """
-        Enter the path and search for valid source codes files, and
+        Enter the path and search for valid source code files, and
         returns a list of source code paths.
         """
-        with os.scandir(path) as entry:
-            for item in entry:
-                fname = item.name
-                if item.is_file() and fname.endswith(CPP_SUFFIX) or fname.endswith(C_SUFFIX):
+        with os.scandir(path) as entries:
+            for item in entries:
+                if item.is_file() and item.name.endswith(SOURCE_SUFFIXES):
                     self.__source_files.append(item.path)
                 elif item.is_dir():
                     self.get_sources(item.path)
@@ -72,10 +71,7 @@ class Builder():
         """
         Set flags for the compiler
         """
-        flags = ""
-        for flag in args:
-            flags += f"{flag} "
-        self.__flags = flags
+        self.__flags = list(args)
 
     def build_executable(self, builddir=".", executablename=""):
         """
@@ -84,20 +80,15 @@ class Builder():
         if is_empty(self.__compiler):
             print("\033[31mCannot detect compiler... Compilation failed!\033[m")
             return
-        if executablename == "":
+
+        if not executablename:
             executablename = self.__executable_name
-        sourcefiles = ""
-        for file in self.__source_files:
-            sourcefiles = sourcefiles + f"{file} "
-        cmd = f"{self.__compiler} "
-        if not is_empty(self.__flags):
-            cmd += f"{self.__flags}"
-        if not is_empty(sourcefiles):
-            cmd += f"{sourcefiles}"
-        if not is_empty(executablename):
-            cmd += f"-o {builddir}/{executablename}"
-        if builddir != ".":
-            if not _search_dir(builddir):
-                os.mkdir(builddir)
-        # print(cmd)
+
+        if builddir != "." and not _search_dir(builddir):
+            os.makedirs(builddir)
+
+        cmd = [self.__compiler, *self.__flags, *self.__source_files]
+        if executablename:
+            cmd += ["-o", f"{builddir}/{executablename}"]
+
         _try_run(cmd)
