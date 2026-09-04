@@ -1,7 +1,11 @@
-# very useless gitignore, i added bc i hate __pycache__ folder
+# very useless gitignore, i added bc __pycache__ annoys me
 
 # pycache folder
 __pycache__/
+
+# tests
+test/
+test.py
 
 # bins
 *.exe

@@ -20,7 +20,7 @@ build.build_executable("build/release", "build.exe")
 ### Let's breakdown the script...
 The first line ```from gbuild import Builder``` includes the `Builder` class that manage our compilation. <br>
 After that the script creates an object from our `Builder` class ```build = Builder("g++")``` passing the `g++` compiler. <br>
-The ```build.get_sources("src")``` line, passes where our source code is located. The `get_sources()` method will search recursively search new source files if the method found a new folder <br>
+The ```build.get_sources("src")``` line, passes where our source code is located. The `get_sources()` method will search recursively search new source files if the method found a new folder. <br>
 And finally the `build.build_executable("build/release", "build.exe")` line, that line will generate an executable called `build.exe` in the path `build/release`. <br>
 <br>
 If no error occurred and everything was in place, in your project will apear the executable `build.exe` in the given path that was specified in the `build_executable()` method.
@@ -39,7 +39,7 @@ build.build_executable("build/release", "build.exe")
 ```
 
 ### Linking
-**GBuild** still do not have native support to link and include libs *(yet)*, but you can use `set_flags()` for linking and include directory's
+**GBuild** still do not have native support to link libs *(yet)*, but you can use `set_flags()` for linking.
 
 > [!NOTE]
-> **GBuild** still under development, maybe you miss some functionalities, but with contribution we can make this tool even better.  
+> **GBuild** still under development, maybe you miss some functionalities.
