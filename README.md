@@ -10,7 +10,7 @@ Or download the source code manually. <br>
 <br>
 After that, you can create an python script for using the package. <br>
 An example script for building a simple executable in a file called `build.py` :
-```
+```py
 from gbuild import Builder
 
 build = Builder("g++")
@@ -29,7 +29,7 @@ If no error occurred and everything was in place, in your project will apear the
 ### Adding flags.
 The `Builder` class, has a method called `set_flags()`, that you can pass valid flags based on our compiler. <br>
 Example:
-```
+```py
 from gbuild import Builder
 
 build = Builder("g++")
