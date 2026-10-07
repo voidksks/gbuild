@@ -1,109 +1,97 @@
-import os
+"""
+GBUILD
 
-COLOR_RED = "\033[31m"
-END = "\033[m"
+A python package for compiling C/C++ to executables
+
+This package still undone, so some functionalities need to be finished.
+"""
+
+import _log
+from _command import _cmd
+import os
+import sys
+from typing import Iterable
 
 CPP_SUFFIXES = (".cpp", ".cxx", ".cc", ".ipp", ".ixx")
 C_SUFFIXES = (".c",)
 SOURCE_SUFFIXES = CPP_SUFFIXES + C_SUFFIXES
 
-def _try_run(args: list[str]):
+_command = _cmd()
+
+def _try_compile(args: list[str]):
     import subprocess
     try:
         subprocess.run(args, check=True)
     except subprocess.CalledProcessError:
-        print(f"{COLOR_RED}Compilation error...{END}")
+        _log.log_error("Compilation error...")
     except OSError:
-        print(f"{COLOR_RED}Cannot run the command...{END}")
+        _log.log_error("Cannot run the compilation command...")
 
-def _search_dir(target: str, path="."):
+def search_dir(target: str, path=".", recursive=False):
+    """
+    Search a target directory and return True if found otherwise False
+    """
     with os.scandir(path) as entries:
-        return any(e.name == target and e.is_dir() for e in entries)
+        for item in entries:
+            if item.is_dir() and item.name == target:
+                return True
+            if recursive and item.is_dir():
+                search_dir(target, item.path)
+    return False
 
-def _search_file(target: str, path="."):
+def search_file(target: str, path=".", recursive=False):
+    """
+    Search a target file and return True if found other wise False
+    """
     with os.scandir(path) as entries:
-        return any(e.name == target and e.is_file() for e in entries)
+        for item in entries:
+            if item.is_file() and item.name == target:
+                return True
+            if recursive and item.is_dir():
+                search_dir(target, item.path)
+        return False
 
-def is_empty(string: str):
-    return string == ""
+def is_empty(iterable: Iterable):
+    return len(iterable) == 0
 
-class _cmd():
-    def __init__(self, compiler: str):
-        self.compiler = compiler
-        self.source_files = []
-        self.executable_name = ""
-        self.flags = []
-        self.includes = []
+def get_sources(path=".", recursive=False):
+    """
+    Search for valid C/C++ source code and return a list of path to the files
+    """
+    sources = []
+    with os.scandir(path) as entries:
+        for item in entries:
+            if item.is_file() and item.name.endswith(SOURCE_SUFFIXES):
+                sources.append(item.path)
+            if recursive and item.is_dir():
+                get_sources(item.path)
+    _command.source_files = sources
+    return sources
 
-class Builder():
-    def __init__(self, compiler=""):
-        self.__cmd = _cmd(compiler)
+def set_compiler(compiler: str):
+    if not is_empty(compiler):
+        _command.compiler = compiler
 
-    def compiler(self):
-        return self.__cmd.compiler
+def set_flags(*flags):
+    _command.flags = list(flags)
 
-    def set_compiler(self, name: str):
-        self.__cmd.compiler = name
+def set_executable_name(name: str):
+    if sys.platform == "win32":
+        name += ".exe"
+    _command.out = name
 
-    def executable_name(self):
-        return self.__cmd.executable_name
-
-    def set_executable_name(self, name: str):
-        self.__cmd.executable_name = name
-
-    def source_files(self):
-        return self.__cmd.source_files
-
-    def include(self, path="."):
-        if not is_empty(path):
-            p = f"-I{path}"
-            self.__cmd.includes.append(p)
-        else:
-            _search_dir("include")
-
-    def includes(self):
-        return self.__cmd.includes
-
-    def get_sources(self, path: str):
-        """
-        Enter the path and search for valid source code files, and
-        returns a list of source code paths.
-        """
-        with os.scandir(path) as entries:
-            for item in entries:
-                if item.is_file() and item.name.endswith(SOURCE_SUFFIXES):
-                    self.__cmd.source_files.append(item.path)
-                elif item.is_dir():
-                    self.get_sources(item.path)
-
-        return self.__cmd.source_files
-
-    def flags(self):
-        return self.__cmd.flags
-
-    def set_flags(self, *args):
-        """
-        Set flags for the compiler
-        """
-        self.__cmd.flags = list(args)
-
-    def build_executable(self, builddir=".", executablename=""):
-        """
-        Build an executable to a given build path
-        """
-        if is_empty(self.__cmd.compiler):
-            print(f"{COLOR_RED}Cannot detect compiler... Compilation failed!{END}")
-            return
-
-        if not executablename:
-            executablename = self.__cmd.executable_name
-
-        if builddir != "." and not _search_dir(builddir):
-            os.makedirs(builddir, exist_ok=True)
-
-        cmd = [self.__cmd.compiler, *self.__cmd.flags, *self.__cmd.includes, *self.__cmd.source_files]
-        if executablename:
-            cmd += ["-o", f"{builddir}/{executablename}"]
-            _try_run(cmd)
-        else:
-            print(f"{COLOR_RED}Executable name was not specified...{END}")
+def build_exacutable(target: str, buildpath="."):
+    """
+    Build an executable to an given build path if specified
+    """
+    if is_empty(_command.compiler):
+        _log.log_error("Compiler was not specified...")
+        return
+    if buildpath != "." and search_dir(buildpath):
+        os.makedirs(buildpath, exist_ok=True)
+    cmd = [_command.compiler, *_command.flags, *_command.source_files, *_command.includes]
+    if _command.out or target:
+        cmd += ["-o", f"{buildpath}/{target}"]
+        _try_compile(cmd)
+    else:
+        _log.log_error("Executable name was not defined")
