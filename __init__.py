@@ -116,8 +116,4 @@ class Builder():
             cmd += ["-o" ,f"{builddir}{executablename}"]
             _try_compile(cmd)
         else:
-<<<<<<< HEAD
-            log.log_error("Executable name was not specified...")
-=======
-            print(f"{COLOR_RED}Executable name was not specified...{END}")
->>>>>>> f7a1cb9fa0b0cadfee1c68d65718c90aa0acc4d8
+            log.log_error("Executable name was not defined...")
