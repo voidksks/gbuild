@@ -1,4 +1,4 @@
-class _cmd():
+class cmd():
     def __init__(self, compiler: str):
         self.compiler = compiler
         self.source_files = []

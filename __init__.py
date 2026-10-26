@@ -1,9 +1,6 @@
 import os
-from sys import platform
-from _command import _cmd
-
-COLOR_RED = "\033[31m"
-END = "\033[m"
+import log
+from command import cmd
 
 CPP_SUFFIXES = (".cpp", ".cxx", ".cc", ".ipp", ".ixx")
 C_SUFFIXES = (".c",)
@@ -14,24 +11,34 @@ def _try_compile(args: list[str]):
     try:
         subprocess.run(args, check=True)
     except subprocess.CalledProcessError:
-        print(f"{COLOR_RED}Compilation error...{END}")
+        log.log_error("Compile error...")
     except OSError:
-        print(f"{COLOR_RED}Cannot run the command...{END}")
+        log.log_warning("Cannot run the command...")
 
-def _search_dir(target: str, path="."):
+def _search_dir(target: str, path=".", recursive=False):
     with os.scandir(path) as entries:
-        return any(e.name == target and e.is_dir() for e in entries)
+        for item in entries:
+            if item.is_dir() and item.name == target:
+                return True
+            if recursive and item.is_dir():
+                _search_dir(target, item.path)
+    return False
 
-def _search_file(target: str, path="."):
+def _search_file(target: str, path=".", recursive=False):
     with os.scandir(path) as entries:
-        return any(e.name == target and e.is_file() for e in entries)
+        for item in entries:
+            if item.is_file() and item.name == target:
+                return True
+            if recursive and item.is_file():
+                _search_file(target, item.path)
+    return False
 
-def is_empty(string: str):
-    return string == ""
+def is_empty(iterable):
+    return len(iterable) == 0
 
 class Builder():
     def __init__(self, compiler=""):
-        self._cmd = _cmd(compiler)
+        self._cmd = cmd(compiler)
 
     def compiler(self):
         return self._cmd.compiler
@@ -44,26 +51,25 @@ class Builder():
         return self._cmd.out
 
     def set_executable_name(self, name: str):
+        from sys import platform
         if is_empty(self._cmd.out):
             if platform == "win32" and ".exe" not in name:
-                self._cmd.out = f"{name}.exe"
+                self._cmd.out = name + ".exe"
             else:
-                self._cmd.out = f"{name}"
+                self._cmd.out = name
         
     def source_files(self):
         return self._cmd.source_files
 
-    def include(self, path="."):
+    def include(self, path: str):
         if not is_empty(path):
             p = f"-I{path}"
             self._cmd.includes.append(p)
-        else:
-            _search_dir("include")
 
     def includes(self):
         return self._cmd.includes
 
-    def get_sources(self, path: str):
+    def search_sources(self, path: str, recursive=False):
         """
         Enter the path and search for valid source code files, and
         returns a list of source code paths.
@@ -73,10 +79,8 @@ class Builder():
             for item in entries:
                 if item.is_file() and item.name.endswith(SOURCE_SUFFIXES):
                     sources.append(item.path)
-                elif item.is_dir():
-                    self.get_sources(item.path)
-
-        return sources
+                if item.is_dir() and recursive:
+                    self.search_sources(item.path)
 
     def flags(self):
         return self._cmd.flags
@@ -92,7 +96,7 @@ class Builder():
         Build an executable to a given build path
         """
         if is_empty(self._cmd.compiler):
-            print(f"{COLOR_RED}Cannot detect compiler... Compilation failed!{END}")
+            log.log_error("Cannot detect compiler... Compilation failed!")
             return
 
         if is_empty(executablename) and self._cmd.out is not None:
@@ -101,12 +105,15 @@ class Builder():
         if builddir != "." and not _search_dir(builddir):
             os.makedirs(builddir, exist_ok=True)
 
+        if is_empty(self._cmd.source_files):
+            log.log_error("No source files was specified...")
+            return
+
         cmd = [self._cmd.compiler, *self._cmd.flags, *self._cmd.includes, *self._cmd.source_files]
         if executablename:
             if "/" not in builddir:
                 builddir += "/"
-            cmd += ["-o" ,f"{builddir}{self._cmd.out}"]
+            cmd += ["-o" ,f"{builddir}{executablename}"]
             _try_compile(cmd)
-            pass
         else:
-            print(f"{COLOR_RED}Executable name was not specified...{END}")
+            log.log_error("Executable name was not specified...")
