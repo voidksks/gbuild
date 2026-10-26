@@ -20,6 +20,7 @@ This script search for C/C++ files and build an executable called `build.exe` at
 <br>
 ### Adding flags.
 The `Builder` class, has a method called `set_flags()`, that you can pass valid flags based on our compiler. <br>
+Example:
 ```py
 from gbuild import Builder
 
