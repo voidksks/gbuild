@@ -89,7 +89,7 @@ class Builder():
         """
         Set flags for the compiler
         """
-        self._cmd.flags = list(args)
+        self._cmd.flags += list(args)
 
     def build_executable(self, executablename="", builddir="."):
         """
